@@ -1,41 +1,50 @@
 import { headers } from "next/headers";
+import { supabase } from "@/lib/supabaseClient";
 
 export default async function Home() {
-  // headers() ora è async
+  // Next.js 16: headers() va awaitato
   const headersList = await headers();
-
-  // Leggiamo il dominio richiesto
   const host = headersList.get("host") || "";
 
-  // Esempi host:
-  // morsiburger.mangialoqui.it
-  // mangialoqui.it
-  // www.mangialoqui.it
+  // Estraiamo slug dal sottodominio
+  let slug: string | null = null;
 
-  let restaurantSlug: string | null = null;
-
-  // Se è un sottodominio tipo xxx.mangialoqui.it
   if (host.endsWith(".mangialoqui.it")) {
     const parts = host.split(".");
     if (parts.length >= 3) {
-      restaurantSlug = parts[0]; // morsiburger
+      slug = parts[0]; // es: test
     }
   }
 
+  // Se esiste slug → carichiamo quel ristorante
+  const { data: restaurant } = slug
+    ? await supabase
+        .from("restaurants")
+        .select("*")
+        .eq("slug", slug)
+        .single()
+    : { data: null };
+
   return (
-    <main style={{ padding: 40, fontFamily: "sans-serif" }}>
+    <main style={{ padding: 40 }}>
       <h1>Mangialoqui Platform</h1>
 
       <p>
         <strong>Host:</strong> {host}
       </p>
 
-      {restaurantSlug ? (
-        <p>
-          🍔 Ristorante identificato: <strong>{restaurantSlug}</strong>
-        </p>
+      {restaurant ? (
+        <>
+          <h2>🍽️ Ristorante attivo:</h2>
+          <p>
+            Nome: <strong>{restaurant.name}</strong>
+          </p>
+          <p>
+            Slug: <strong>{restaurant.slug}</strong>
+          </p>
+        </>
       ) : (
-        <p>🌍 Sei sul dominio principale</p>
+        <p>🌍 Dominio principale (nessun ristorante selezionato)</p>
       )}
     </main>
   );
