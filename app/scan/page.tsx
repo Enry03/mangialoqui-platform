@@ -1,73 +1,57 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { BrowserMultiFormatReader } from "@zxing/browser";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { Html5QrcodeScanner } from "html5-qrcode";
 
 export default function ScanPage() {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-
   const [scannedId, setScannedId] = useState<string | null>(null);
   const [customer, setCustomer] = useState<any>(null);
   const [pointsToAdd, setPointsToAdd] = useState<number>(5);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (scannedId) return;
 
-    const codeReader = new BrowserMultiFormatReader();
-    let controls: any;
+    const scanner = new Html5QrcodeScanner(
+      "reader",
+      {
+        fps: 10,
+        qrbox: 250,
+      },
+      false
+    );
 
-    async function startScanner() {
-      if (!videoRef.current) return;
+    scanner.render(
+      async (decodedText) => {
+        scanner.clear();
 
-      try {
-        controls = await codeReader.decodeFromVideoDevice(
-          undefined,
-          videoRef.current,
-          (result) => {
-            if (result) {
-              const text = result.getText();
-              setScannedId(text);
-              loadCustomer(text);
+        setScannedId(decodedText);
 
-              if (controls) controls.stop();
-            }
-          }
-        );
-      } catch (err) {
-        alert("Errore fotocamera");
-      }
-    }
+        const { data, error } = await supabase
+          .from("customers")
+          .select("*")
+          .eq("id", decodedText)
+          .single();
 
-    startScanner();
+        if (error) {
+          alert("Cliente non trovato");
+          return;
+        }
+
+        setCustomer(data);
+      },
+      () => {}
+    );
 
     return () => {
-      if (controls) controls.stop();
+      scanner.clear().catch(() => {});
     };
   }, [scannedId]);
 
-  async function loadCustomer(id: string) {
-    const { data, error } = await supabase
-      .from("customers")
-      .select("*")
-      .eq("id", id)
-      .single();
-
-    if (error) {
-      alert("Cliente non trovato");
-      return;
-    }
-
-    setCustomer(data);
-  }
-
-  async function addPoints(amount: number) {
+  async function addPoints() {
     if (!customer) return;
 
-    setLoading(true);
-
-    const newPoints = customer.points + amount;
+    const newPoints = customer.points + pointsToAdd;
 
     const { error } = await supabase
       .from("customers")
@@ -76,80 +60,60 @@ export default function ScanPage() {
 
     if (error) {
       alert("Errore aggiornamento punti");
-      setLoading(false);
       return;
     }
 
-    setCustomer({ ...customer, points: newPoints });
-    alert(`Aggiunti ${amount} punti`);
+    alert("Punti aggiunti!");
 
-    setLoading(false);
+    setCustomer({ ...customer, points: newPoints });
   }
 
   return (
-    <main style={{ padding: 30, fontFamily: "sans-serif", color: "white" }}>
+    <main style={{ padding: 30, color: "white" }}>
       <h1>Scanner Fidelity</h1>
 
       {!customer && (
-        <div style={{ marginTop: 20 }}>
-          <video
-            ref={videoRef}
+        <div>
+          <p>Inquadra il QR Code cliente</p>
+          <div
+            id="reader"
             style={{
-              width: "100%",
-              maxWidth: 420,
-              borderRadius: 12,
+              width: "300px",
+              marginTop: "20px",
+              borderRadius: "12px",
+              overflow: "hidden",
             }}
           />
-          <p style={{ marginTop: 10 }}>Inquadra il QR Code del cliente</p>
         </div>
       )}
 
       {customer && (
         <div style={{ marginTop: 30 }}>
           <h2>Cliente trovato</h2>
-
           <p>
-            <strong>Nome:</strong> {customer.full_name}
+            Nome: <b>{customer.full_name}</b>
           </p>
-
           <p>
-            <strong>Punti:</strong> {customer.points}
+            Punti attuali: <b>{customer.points}</b>
           </p>
-
-          <button
-            onClick={() => addPoints(5)}
-            disabled={loading}
-            style={{ marginTop: 20, padding: 12 }}
-          >
-            +5 punti
-          </button>
 
           <div style={{ marginTop: 20 }}>
+            <button
+              onClick={() => setPointsToAdd(5)}
+              style={{ marginRight: 10 }}
+            >
+              +5 punti
+            </button>
+
             <input
               type="number"
               value={pointsToAdd}
               onChange={(e) => setPointsToAdd(Number(e.target.value))}
-              style={{ padding: 8, width: 80 }}
+              style={{ width: 80, marginRight: 10 }}
             />
 
-            <button
-              onClick={() => addPoints(pointsToAdd)}
-              disabled={loading}
-              style={{ marginLeft: 10, padding: 12 }}
-            >
-              Aggiungi custom
-            </button>
+            <button onClick={addPoints}>Aggiungi punti</button>
           </div>
-
-          <button
-            onClick={() => {
-              setCustomer(null);
-              setScannedId(null);
-            }}
-            style={{ marginTop: 30, padding: 12 }}
-          >
-            Scansiona un altro
-          </button>
         </div>
       )}
     </main>
