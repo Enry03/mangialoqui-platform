@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase/supabaseClient";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   async function handleLogin() {
     setLoading(true);
@@ -22,7 +24,7 @@ export default function LoginPage() {
       return;
     }
 
-    window.location.href = "/scan";
+    router.replace("/dashboard/customers");
   }
 
   return (
@@ -38,6 +40,8 @@ export default function LoginPage() {
       <h1>Login Staff</h1>
 
       <input
+        name="email"
+        id="email"
         placeholder="Email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
@@ -50,6 +54,8 @@ export default function LoginPage() {
       />
 
       <input
+        name="password"
+        id="password"
         placeholder="Password"
         type="password"
         value={password}

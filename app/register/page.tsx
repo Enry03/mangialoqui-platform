@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/supabase/supabaseClient";
 import { useRestaurantSlug } from "@/lib/useRestaurantSlug";
 
 export default function RegisterPage() {

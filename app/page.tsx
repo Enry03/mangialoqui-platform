@@ -1,5 +1,5 @@
 import { headers } from "next/headers";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/supabase/supabaseClient";
 
 export default async function Home() {
   // Next.js 16: headers() va awaitato
