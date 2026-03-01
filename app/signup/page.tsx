@@ -35,7 +35,7 @@ export default function SignupPage() {
       const { data: restaurant, error: restError } = await supabase
         .from("restaurants")
         .select("id")
-        .eq("subdomain", subdomain)
+        .eq("slug", subdomain)
         .single();
 
       if (restError || !restaurant) {
