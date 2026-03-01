@@ -18,7 +18,9 @@ export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [restaurantName, setRestaurantName] = useState("");
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<"points" | "created_at" | "full_name">("points");
+  const [sortBy, setSortBy] = useState<"points" | "created_at" | "full_name">(
+    "points"
+  );
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -51,12 +53,35 @@ export default function CustomersPage() {
 
       setRestaurantName(restaurant?.name || "");
 
+      // clienti + transazioni collegati
       const { data: customersData } = await supabase
         .from("customers")
-        .select("id, full_name, email, points, created_at")
+        .select(
+          `
+          id,
+          full_name,
+          email,
+          created_at,
+          loyalty_transactions(points_delta)
+        `
+        )
         .eq("restaurant_id", profile.restaurant_id);
 
-      setCustomers(customersData || []);
+      const mapped: Customer[] = (customersData || []).map((c: any) => {
+        const total = (c.loyalty_transactions || []).reduce(
+          (acc: number, tx: any) => acc + (tx.points_delta || 0),
+          0
+        );
+        return {
+          id: c.id,
+          full_name: c.full_name,
+          email: c.email,
+          created_at: c.created_at,
+          points: total,
+        };
+      });
+
+      setCustomers(mapped);
       setLoading(false);
     }
 
@@ -181,7 +206,9 @@ export default function CustomersPage() {
           {filtered.map((c) => (
             <div key={c.id} style={styles.tableRow}>
               <div style={{ flex: 3 }}>
-                <div style={styles.customerName}>{c.full_name || "Senza nome"}</div>
+                <div style={styles.customerName}>
+                  {c.full_name || "Senza nome"}
+                </div>
               </div>
 
               <div style={{ flex: 2 }}>
@@ -192,7 +219,14 @@ export default function CustomersPage() {
                 <span style={styles.pointsBadge}>{c.points} pt</span>
               </div>
 
-              <div style={{ flex: 1, textAlign: "right", fontSize: 12, opacity: 0.7 }}>
+              <div
+                style={{
+                  flex: 1,
+                  textAlign: "right",
+                  fontSize: 12,
+                  opacity: 0.7,
+                }}
+              >
                 {new Date(c.created_at).toLocaleDateString("it-IT")}
               </div>
 
@@ -274,8 +308,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderRadius: 999,
     border: "none",
     cursor: "pointer",
-    background:
-      "linear-gradient(to right, #2563eb, #7c3aed)",
+    background: "linear-gradient(to right, #2563eb, #7c3aed)",
     color: "#f9fafb",
     fontWeight: 600,
     fontSize: 14,
