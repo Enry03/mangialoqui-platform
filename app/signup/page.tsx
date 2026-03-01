@@ -54,12 +54,17 @@ export default function SignupPage() {
           password,
         });
 
-      if (signUpError || !signUpData.user) {
+        if (signUpError || !signUpData.user) {
         console.error(signUpError);
-        setError("Errore nella registrazione. Controlla i dati inseriti.");
+        if (signUpError?.message?.includes("already registered")) {
+            setError("Questa email è già registrata. Accedi con le tue credenziali.");
+        } else {
+            setError("Errore nella registrazione. Controlla i dati inseriti.");
+        }
         setLoading(false);
         return;
-      }
+        }
+
 
       const userId = signUpData.user.id;
 

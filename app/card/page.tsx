@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/supabaseClient";
 import { QRCodeSVG } from "qrcode.react";
 
-
 type Transaction = {
   id: string;
   points_delta: number;
@@ -20,6 +19,8 @@ type Customer = {
   phone: string | null;
   qr_code: string;
   created_at: string;
+  restaurant_id: string | null;
+  restaurants?: { name: string } | null;
 };
 
 export default function CardPage() {
@@ -50,10 +51,11 @@ export default function CardPage() {
 
       const userId = session.user.id;
 
-      // prova a trovare il customer collegato a questo user_id
       const { data: cust, error: custError } = await supabase
         .from("customers")
-        .select("id, full_name, email, phone, qr_code, created_at")
+        .select(
+          "id, full_name, email, phone, qr_code, created_at, restaurant_id, restaurants(name)"
+        )
         .eq("user_id", userId)
         .maybeSingle();
 
@@ -65,15 +67,25 @@ export default function CardPage() {
         return;
       }
 
-      if (cust) {
-        setCustomer(cust as Customer);
-        // carica storico
-        await loadTransactions(cust.id);
+        if (cust) {
+        const loadedCustomer: Customer = {
+            id: cust.id as string,
+            full_name: cust.full_name ?? null,
+            email: cust.email ?? null,
+            phone: cust.phone ?? null,
+            qr_code: cust.qr_code,
+            created_at: cust.created_at,
+            restaurant_id: cust.restaurant_id ?? null,
+            restaurants: (cust as any).restaurants ?? null,
+        };
+
+        setCustomer(loadedCustomer);
+        await loadTransactions(loadedCustomer.id);
         setLoading(false);
-      } else {
-        // nessuna card ancora, mostriamo solo il form
+        } else {
         setLoading(false);
-      }
+        }
+
 
       setSessionChecked(true);
     }
@@ -116,12 +128,11 @@ export default function CardPage() {
       const userId = user.id;
       const email = user.email;
 
-      // opzionale: restaurant_id fisso o derivato da qualche config
-      const restaurantId = null; // se ora non ti serve, lascia null
+      // restaurant_id per ora non usato qui (signup lo gestisce già)
+      const restaurantId = null;
 
       const tempQr = `pending:${Date.now()}`;
 
-      // crea customer
       const { data: created, error: createError } = await supabase
         .from("customers")
         .insert({
@@ -132,7 +143,9 @@ export default function CardPage() {
           restaurant_id: restaurantId,
           qr_code: tempQr,
         })
-        .select("id, full_name, email, phone, qr_code, created_at")
+        .select(
+          "id, full_name, email, phone, qr_code, created_at, restaurant_id, restaurants(name)"
+        )
         .single();
 
       if (createError || !created) {
@@ -144,7 +157,6 @@ export default function CardPage() {
 
       const customerId = created.id as string;
 
-      // aggiorna qr_code definitivo basato su id
       const realQr = `cust:${customerId}`;
       const { error: qrError } = await supabase
         .from("customers")
@@ -155,14 +167,20 @@ export default function CardPage() {
         console.error("qrError", qrError);
       }
 
-      const finalCustomer: Customer = {
-        ...(created as Customer),
+        const finalCustomer: Customer = {
+        id: created.id as string,
+        full_name: created.full_name ?? null,
+        email: created.email ?? null,
+        phone: created.phone ?? null,
         qr_code: realQr,
-      };
+        created_at: created.created_at,
+        restaurant_id: created.restaurant_id ?? null,
+        restaurants: (created as any).restaurants ?? null,
+        };
 
-      setCustomer(finalCustomer);
+        setCustomer(finalCustomer);
 
-      // transazione di benvenuto +5
+
       const { error: txError } = await supabase
         .from("loyalty_transactions")
         .insert({
@@ -250,7 +268,19 @@ export default function CardPage() {
   return (
     <div style={styles.page}>
       <div style={styles.cardWide}>
-        <h1 style={styles.title}>La tua fidelity card</h1>
+        <div style={styles.headerRow}>
+          <h1 style={styles.title}>La tua fidelity card</h1>
+          <button
+            style={styles.logoutButton}
+            onClick={async () => {
+              await supabase.auth.signOut();
+              router.replace("/login");
+            }}
+          >
+            Esci
+          </button>
+        </div>
+
         <p style={styles.subtitle}>
           Mostra questa schermata (o il QR) al ristorante per accumulare punti.
         </p>
@@ -272,7 +302,9 @@ export default function CardPage() {
                     {customer.full_name || "Cliente senza nome"}
                   </h2>
                   <div style={styles.customerMetaSmall}>
-                    Iscritto il {joinedAt}
+                    {customer.restaurants?.name
+                      ? `Ristorante: ${customer.restaurants.name} · Iscritto il ${joinedAt}`
+                      : `Iscritto il ${joinedAt}`}
                   </div>
                 </div>
               </div>
@@ -287,20 +319,21 @@ export default function CardPage() {
             </div>
 
             <div style={styles.qrCard}>
-                <div style={styles.qrBox}>
+              <div style={styles.qrBox}>
                 <div style={styles.qrWrapper}>
-                    <QRCodeSVG
+                  <QRCodeSVG
                     value={customer.qr_code}
                     size={160}
                     bgColor="#020617"
                     fgColor="#ffffff"
                     level="M"
-                    />
+                  />
                 </div>
-                </div>
-                <p style={styles.qrHint}>
-                Il ristorante scannerizzerà questo QR per riconoscere la tua card.
-                </p>
+              </div>
+              <p style={styles.qrHint}>
+                Il ristorante scannerizzerà questo QR per riconoscere la tua
+                card.
+              </p>
             </div>
           </section>
 
@@ -374,6 +407,20 @@ const styles: { [key: string]: React.CSSProperties } = {
   cardWide: {
     width: "100%",
     maxWidth: 960,
+  },
+  headerRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  logoutButton: {
+    padding: "6px 12px",
+    borderRadius: 999,
+    border: "1px solid rgba(148,163,184,0.7)",
+    background: "rgba(15,23,42,0.9)",
+    color: "#e5e7eb",
+    cursor: "pointer",
+    fontSize: 13,
   },
   title: {
     margin: 0,
@@ -522,7 +569,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     background: "#020617",
     border: "1px solid rgba(148,163,184,0.6)",
   },
-
   qrHint: {
     marginTop: 8,
     fontSize: 13,
