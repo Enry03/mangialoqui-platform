@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/supabaseClient";
+import { QRCodeSVG } from "qrcode.react";
+
 
 type Transaction = {
   id: string;
@@ -285,14 +287,20 @@ export default function CardPage() {
             </div>
 
             <div style={styles.qrCard}>
-              <div style={styles.qrBox}>
-                {/* Per ora mostriamo solo il testo del qr_code;
-                    più avanti puoi sostituirlo con una libreria QR */}
-                <div style={styles.qrFake}>{customer.qr_code}</div>
-              </div>
-              <p style={styles.qrHint}>
-                Il ristorante scannerizzerà questo codice per riconoscerti.
-              </p>
+                <div style={styles.qrBox}>
+                <div style={styles.qrWrapper}>
+                    <QRCodeSVG
+                    value={customer.qr_code}
+                    size={160}
+                    bgColor="#020617"
+                    fgColor="#ffffff"
+                    level="M"
+                    />
+                </div>
+                </div>
+                <p style={styles.qrHint}>
+                Il ristorante scannerizzerà questo QR per riconoscere la tua card.
+                </p>
             </div>
           </section>
 
@@ -508,19 +516,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     justifyContent: "center",
     padding: 12,
   },
-  qrFake: {
-    minWidth: 160,
-    minHeight: 160,
-    borderRadius: 16,
-    border: "1px dashed rgba(148,163,184,0.6)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: 12,
-    color: "#9ca3af",
-    padding: 8,
-    textAlign: "center",
+  qrWrapper: {
+    padding: 12,
+    borderRadius: 18,
+    background: "#020617",
+    border: "1px solid rgba(148,163,184,0.6)",
   },
+
   qrHint: {
     marginTop: 8,
     fontSize: 13,
