@@ -133,9 +133,7 @@ export default function CardPage() {
       const userId = user.id;
       const email = user.email;
 
-      // per ora restaurant_id null (lo setti da altrove)
       const restaurantId = null;
-
       const tempQr = `pending:${Date.now()}`;
 
       const { data: created, error: createError } = await supabase
@@ -295,54 +293,47 @@ export default function CardPage() {
         </p>
 
         <div style={styles.cardLayout}>
-          {/* Card + QR */}
+          {/* Card verticale */}
           <section style={styles.leftColumn}>
-            <div style={styles.cardPrimary}>
-              <div style={styles.customerHeader}>
-                <div style={styles.avatarCircle}>
-                  {(customer.full_name || "?")
-                    .toString()
-                    .trim()
-                    .charAt(0)
-                    .toUpperCase()}
-                </div>
+            <div style={styles.verticalCard}>
+              {/* Riga in alto: nome + saldo punti */}
+              <div style={styles.topRow}>
                 <div>
-                  <h2 style={styles.customerName}>
+                  <div style={styles.cardNameLine}>
                     {customer.full_name || "Cliente senza nome"}
-                  </h2>
+                  </div>
                   <div style={styles.customerMetaSmall}>
-                    {customer.restaurants?.name
-                      ? `Ristorante: ${customer.restaurants.name} · Iscritto il ${joinedAt}`
-                      : `Iscritto il ${joinedAt}`}
+                    Iscritto il {joinedAt}
                   </div>
                 </div>
-              </div>
 
-              <div style={styles.pointsRow}>
-                <div>
-                  <div style={styles.pointsLabel}>Saldo punti</div>
-                  <div style={styles.pointsValue}>{currentPoints}</div>
+                <div style={styles.pointsBlock}>
+                  <div style={styles.pointsLabelSmall}>Saldo punti</div>
+                  <div style={styles.pointsBig}>{currentPoints}</div>
                 </div>
-                <div style={styles.pointsChip}>Fidelity attiva</div>
               </div>
-            </div>
 
-            <div style={styles.qrCard}>
-              <div style={styles.qrBox}>
-                <div style={styles.qrWrapper}>
+              {/* QR al centro */}
+              <div style={styles.qCenter}>
+                <div style={styles.qrWhiteBox}>
                   <QRCodeSVG
                     value={customer.qr_code}
-                    size={160}
-                    bgColor="#020617"
+                    size={140}
+                    bgColor="#06327c"
                     fgColor="#ffffff"
                     level="M"
                   />
                 </div>
               </div>
-              <p style={styles.qrHint}>
-                Il ristorante scannerizzerà questo QR per riconoscere la tua
-                card.
-              </p>
+
+              {/* Logo ristorante in basso */}
+              <div style={styles.bottomLogoRow}>
+                <div style={styles.restaurantLogoCircle}>
+                  <span style={styles.restaurantLogoText}>
+                    {customer.restaurants?.name?.charAt(0).toUpperCase() || "R"}
+                  </span>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -494,94 +485,16 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: "flex",
     flexDirection: "column",
   },
-  cardPrimary: {
-    background: "rgba(15,23,42,0.96)",
-    borderRadius: 20,
-    border: "1px solid rgba(55,65,81,0.9)",
-    padding: 22,
-    boxShadow: "0 24px 60px rgba(15,23,42,0.9)",
-  },
   cardSecondary: {
     background: "rgba(15,23,42,0.96)",
     borderRadius: 20,
     border: "1px solid rgba(55,65,81,0.85)",
     padding: 20,
   },
-  customerHeader: {
-    display: "flex",
-    gap: 16,
-    alignItems: "center",
-  },
-  avatarCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: "999px",
-    background:
-      "conic-gradient(from 140deg, #2563eb, #7c3aed, #f97316, #2563eb)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: 700,
-    fontSize: 22,
-    color: "#0b1120",
-  },
-  customerName: {
-    margin: 0,
-    fontSize: 20,
-    fontWeight: 700,
-  },
   customerMetaSmall: {
     marginTop: 4,
     fontSize: 12,
-    color: "#9ca3af",
-  },
-  pointsRow: {
-    marginTop: 24,
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  pointsLabel: {
-    fontSize: 13,
-    textTransform: "uppercase",
-    letterSpacing: 0.12,
-    color: "#9ca3af",
-  },
-  pointsValue: {
-    marginTop: 4,
-    fontSize: 34,
-    fontWeight: 800,
-  },
-  pointsChip: {
-    padding: "6px 12px",
-    borderRadius: 999,
-    background: "rgba(22,163,74,0.12)",
-    color: "#4ade80",
-    fontSize: 12,
-    fontWeight: 600,
-  },
-  qrCard: {
-    background: "rgba(15,23,42,0.96)",
-    borderRadius: 20,
-    border: "1px solid rgba(55,65,81,0.85)",
-    padding: 18,
-    textAlign: "center",
-  },
-  qrBox: {
-    display: "flex",
-    justifyContent: "center",
-    padding: 12,
-  },
-  qrWrapper: {
-    padding: 12,
-    borderRadius: 18,
-    background: "#020617",
-    border: "1px solid rgba(148,163,184,0.6)",
-  },
-  qrHint: {
-    marginTop: 8,
-    fontSize: 13,
-    color: "#9ca3af",
+    color: "#cbd5f5",
   },
   sectionTitle: {
     margin: 0,
@@ -617,5 +530,69 @@ const styles: { [key: string]: React.CSSProperties } = {
   txAmount: {
     fontWeight: 700,
     fontSize: 14,
+  },
+
+  // nuova card verticale
+  verticalCard: {
+    width: 260,
+    height: 430,
+    borderRadius: 18,
+    backgroundColor: "#06327c",
+    border: "2px solid #a855f7",
+    padding: 20,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    color: "#ffffff",
+  },
+  topRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  cardNameLine: {
+    fontSize: 16,
+    fontWeight: 500,
+    lineHeight: 1.3,
+  },
+  pointsBlock: {
+    textAlign: "right",
+  },
+  pointsLabelSmall: {
+    fontSize: 11,
+    marginBottom: 4,
+  },
+  pointsBig: {
+    fontSize: 32,
+    fontWeight: 700,
+  },
+  qCenter: {
+    flexGrow: 1,
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  qrWhiteBox: {
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: "#ffffff",
+  },
+  bottomLogoRow: {
+    display: "flex",
+    justifyContent: "center",
+    marginTop: 10,
+  },
+  restaurantLogoCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: "999px",
+    border: "2px solid #ffffff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  restaurantLogoText: {
+    fontSize: 18,
+    fontWeight: 700,
   },
 };
