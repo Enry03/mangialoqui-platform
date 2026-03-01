@@ -31,7 +31,6 @@ export default function CardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // form state per creazione card
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [creating, setCreating] = useState(false);
@@ -53,9 +52,16 @@ export default function CardPage() {
 
       const { data: cust, error: custError } = await supabase
         .from("customers")
-        .select(
-          "id, full_name, email, phone, qr_code, created_at, restaurant_id, restaurants(name)"
-        )
+        .select(`
+          id,
+          full_name,
+          email,
+          phone,
+          qr_code,
+          created_at,
+          restaurant_id,
+          restaurants ( name )
+        `)
         .eq("user_id", userId)
         .maybeSingle();
 
@@ -67,25 +73,24 @@ export default function CardPage() {
         return;
       }
 
-        if (cust) {
+      if (cust) {
         const loadedCustomer: Customer = {
-            id: cust.id as string,
-            full_name: cust.full_name ?? null,
-            email: cust.email ?? null,
-            phone: cust.phone ?? null,
-            qr_code: cust.qr_code,
-            created_at: cust.created_at,
-            restaurant_id: cust.restaurant_id ?? null,
-            restaurants: (cust as any).restaurants ?? null,
+          id: cust.id as string,
+          full_name: cust.full_name ?? null,
+          email: cust.email ?? null,
+          phone: cust.phone ?? null,
+          qr_code: cust.qr_code,
+          created_at: cust.created_at,
+          restaurant_id: cust.restaurant_id ?? null,
+          restaurants: (cust as any).restaurants ?? null,
         };
 
         setCustomer(loadedCustomer);
         await loadTransactions(loadedCustomer.id);
         setLoading(false);
-        } else {
+      } else {
         setLoading(false);
-        }
-
+      }
 
       setSessionChecked(true);
     }
@@ -128,7 +133,7 @@ export default function CardPage() {
       const userId = user.id;
       const email = user.email;
 
-      // restaurant_id per ora non usato qui (signup lo gestisce già)
+      // per ora restaurant_id null (lo setti da altrove)
       const restaurantId = null;
 
       const tempQr = `pending:${Date.now()}`;
@@ -143,9 +148,16 @@ export default function CardPage() {
           restaurant_id: restaurantId,
           qr_code: tempQr,
         })
-        .select(
-          "id, full_name, email, phone, qr_code, created_at, restaurant_id, restaurants(name)"
-        )
+        .select(`
+          id,
+          full_name,
+          email,
+          phone,
+          qr_code,
+          created_at,
+          restaurant_id,
+          restaurants ( name )
+        `)
         .single();
 
       if (createError || !created) {
@@ -167,7 +179,7 @@ export default function CardPage() {
         console.error("qrError", qrError);
       }
 
-        const finalCustomer: Customer = {
+      const finalCustomer: Customer = {
         id: created.id as string,
         full_name: created.full_name ?? null,
         email: created.email ?? null,
@@ -176,10 +188,9 @@ export default function CardPage() {
         created_at: created.created_at,
         restaurant_id: created.restaurant_id ?? null,
         restaurants: (created as any).restaurants ?? null,
-        };
+      };
 
-        setCustomer(finalCustomer);
-
+      setCustomer(finalCustomer);
 
       const { error: txError } = await supabase
         .from("loyalty_transactions")
@@ -211,7 +222,6 @@ export default function CardPage() {
     );
   }
 
-  // 3) se non c'è customer → form di creazione
   if (!customer) {
     return (
       <div style={styles.page}>
@@ -258,7 +268,6 @@ export default function CardPage() {
     );
   }
 
-  // 4) vista card esistente
   const currentPoints = transactions.reduce(
     (acc, tx) => acc + (tx.points_delta || 0),
     0
