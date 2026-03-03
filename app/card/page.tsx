@@ -20,7 +20,7 @@ type Customer = {
   qr_code: string;
   created_at: string;
   restaurant_id: string | null;
-  restaurants?: { name: string } | null;
+   restaurants?: { name: string; logo_url: string | null } | null;
 };
 
 export default function CardPage() {
@@ -60,7 +60,7 @@ export default function CardPage() {
           qr_code,
           created_at,
           restaurant_id,
-          restaurants ( name )
+          restaurants ( name, logo_url )
         `)
         .eq("user_id", userId)
         .maybeSingle();
@@ -329,9 +329,18 @@ export default function CardPage() {
               {/* Logo ristorante in basso */}
               <div style={styles.bottomLogoRow}>
                 <div style={styles.restaurantLogoCircle}>
-                  <span style={styles.restaurantLogoText}>
-                    {customer.restaurants?.name?.charAt(0).toUpperCase() || "R"}
-                  </span>
+                  {customer.restaurants?.logo_url ? (
+                    // se usi <img> semplice
+                    <img
+                      src={customer.restaurants.logo_url}
+                      alt={customer.restaurants.name || "Logo ristorante"}
+                      style={styles.restaurantLogoImage}
+                    />
+                  ) : (
+                    <span style={styles.restaurantLogoText}>
+                      {customer.restaurants?.name?.charAt(0).toUpperCase() || "R"}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -595,4 +604,10 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: 18,
     fontWeight: 700,
   },
+  restaurantLogoImage: {
+  width: "70%",
+  height: "70%",
+  objectFit: "contain",
+},
+
 };
