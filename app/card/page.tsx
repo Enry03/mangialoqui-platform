@@ -43,7 +43,6 @@ export default function CardPage() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 1) controlla sessione e carica customer + restaurant
   useEffect(() => {
     async function init() {
       const {
@@ -94,7 +93,6 @@ export default function CardPage() {
 
         setCustomer(loadedCustomer);
 
-        // carica ristorante separato
         if (loadedCustomer.restaurant_id) {
           const { data: rest, error: restError } = await supabase
             .from("restaurants")
@@ -112,8 +110,7 @@ export default function CardPage() {
           } else if (restError) {
             console.error("restaurantError", restError);
           }
-}
-
+        }
 
         await loadTransactions(loadedCustomer.id);
         setLoading(false);
@@ -142,7 +139,6 @@ export default function CardPage() {
     setTransactions((txData || []) as Transaction[]);
   }
 
-  // 2) creazione card per utente loggato (fallback: se entra qui significa che non c'è ancora customer)
   async function handleCreateCard(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -162,7 +158,7 @@ export default function CardPage() {
       const userId = user.id;
       const email = user.email;
 
-      const restaurantId = null; // in questo flow vecchio resta null
+      const restaurantId = null;
       const tempQr = `pending:${Date.now()}`;
 
       const { data: created, error: createError } = await supabase
@@ -196,8 +192,8 @@ export default function CardPage() {
       }
 
       const customerId = created.id as string;
-
       const realQr = `cust:${customerId}`;
+
       const { error: qrError } = await supabase
         .from("customers")
         .update({ qr_code: realQr })
@@ -295,20 +291,17 @@ export default function CardPage() {
     );
   }
 
-console.log("customer state:", customer, "restaurant state:", restaurant);
+  const currentPoints = transactions.reduce(
+    (acc, tx) => acc + (tx.points_delta || 0),
+    0
+  );
+  const joinedAt = new Date(customer.created_at).toLocaleDateString("it-IT");
 
-const currentPoints = transactions.reduce(
-  (acc, tx) => acc + (tx.points_delta || 0),
-  0
-);
-const joinedAt = new Date(customer.created_at).toLocaleDateString("it-IT");
+  const cardBg = restaurant?.primary_color || "#06327c";
+  const cardBorder = restaurant?.accent_color || "#a855f7";
+  const qrBg = restaurant?.primary_color || "#06327c";
 
-// colori tema ristorante
-const cardBg = restaurant?.primary_color || "#06327c";
-const cardBorder = restaurant?.accent_color || "#a855f7";
-const qrBg = restaurant?.primary_color || "#06327c";
-
-return (
+  return (
     <div style={styles.page}>
       <div style={styles.cardWide}>
         <div style={styles.headerRow}>
@@ -331,8 +324,13 @@ return (
         <div style={styles.cardLayout}>
           {/* Card verticale */}
           <section style={styles.leftColumn}>
-            <div style={styles.verticalCard}>
-              {/* Riga in alto: nome + saldo punti */}
+            <div
+              style={{
+                ...styles.verticalCard,
+                backgroundColor: cardBg,
+                borderColor: cardBorder,
+              }}
+            >
               <div style={styles.topRow}>
                 <div>
                   <div style={styles.cardNameLine}>
@@ -349,20 +347,18 @@ return (
                 </div>
               </div>
 
-              {/* QR al centro */}
               <div style={styles.qCenter}>
                 <div style={styles.qrWhiteBox}>
                   <QRCodeSVG
                     value={customer.qr_code}
                     size={140}
-                    bgColor="#06327c"
+                    bgColor={qrBg}
                     fgColor="#ffffff"
                     level="M"
                   />
                 </div>
               </div>
 
-              {/* Logo ristorante in basso */}
               <div style={styles.bottomLogoRow}>
                 <div style={styles.restaurantLogoCircle}>
                   {restaurant?.logo_url ? (
@@ -456,6 +452,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
   },
   logoutButton: {
     padding: "6px 12px",
@@ -468,7 +466,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   title: {
     margin: 0,
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 700,
   },
   subtitle: {
@@ -514,16 +512,18 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: 13,
     color: "#f97373",
   },
+
+  // layout responsive: 2 colonne su desktop, 1 colonna su mobile
   cardLayout: {
     marginTop: 20,
     display: "grid",
     gridTemplateColumns: "minmax(0, 1.2fr) minmax(0, 1fr)",
     gap: 20,
-  },
+  } as any,
   leftColumn: {
     display: "flex",
     flexDirection: "column",
-    gap: 16,
+    alignItems: "center",
   },
   rightColumn: {
     display: "flex",
@@ -534,6 +534,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderRadius: 20,
     border: "1px solid rgba(55,65,81,0.85)",
     padding: 20,
+    height: "100%",
   },
   customerMetaSmall: {
     marginTop: 4,
@@ -576,9 +577,10 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: 14,
   },
 
-  // nuova card verticale
+  // card verticale responsive
   verticalCard: {
-    width: 260,
+    width: "100%",
+    maxWidth: 280,
     height: 430,
     borderRadius: 18,
     backgroundColor: "#06327c",
@@ -593,6 +595,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
+    gap: 12,
   },
   cardNameLine: {
     fontSize: 16,
@@ -607,7 +610,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     marginBottom: 4,
   },
   pointsBig: {
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: 700,
   },
   qCenter: {
@@ -645,3 +648,5 @@ const styles: { [key: string]: React.CSSProperties } = {
     objectFit: "contain",
   },
 };
+
+
