@@ -17,16 +17,28 @@ export default function SignupPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    console.log("handleSubmit CALLED");
     setError(null);
     setLoading(true);
 
     try {
-      // 0) ricava subdominio e restaurant_id
+      // 0) ricava restaurant_id
       const host =
         typeof window !== "undefined" ? window.location.host : undefined;
       const subdomain = getSubdomainFromHost(host);
 
-      if (!subdomain) {
+      console.log("signup host/subdomain:", host, subdomain);
+
+      // se siamo in locale (localhost o IP), usa direttamente uno slug fisso
+      const isLocal =
+        host?.startsWith("localhost") || /^[0-9.]+:\d+$/.test(host || "");
+
+      // slug del ristorante di test in Supabase (modifica se diverso)
+      const fallbackSlug = "morsiburger";
+
+      const slugToUse = isLocal ? fallbackSlug : subdomain;
+
+      if (!slugToUse) {
         setError("Ristorante non riconosciuto dall'indirizzo.");
         setLoading(false);
         return;
@@ -34,12 +46,20 @@ export default function SignupPage() {
 
       const { data: restaurant, error: restError } = await supabase
         .from("restaurants")
-        .select("id")
-        .eq("slug", subdomain)
-        .single();
+        .select("id, slug, name, logo_url")
+        .eq("slug", slugToUse)
+        .maybeSingle();
 
-      if (restError || !restaurant) {
+      console.log("restaurant by slug:", restaurant, restError);
+
+      if (restError) {
         console.error("restError", restError);
+        setError("Errore nel caricamento del ristorante.");
+        setLoading(false);
+        return;
+      }
+
+      if (!restaurant) {
         setError("Ristorante non configurato.");
         setLoading(false);
         return;
@@ -54,17 +74,20 @@ export default function SignupPage() {
           password,
         });
 
-        if (signUpError || !signUpData.user) {
+      if (signUpError || !signUpData.user) {
         console.error(signUpError);
         if (signUpError?.message?.includes("already registered")) {
-            setError("Questa email è già registrata. Accedi con le tue credenziali.");
+          setError(
+            "Questa email è già registrata. Accedi con le tue credenziali."
+          );
         } else {
-            setError("Errore nella registrazione. Controlla i dati inseriti.");
+          setError(
+            "Errore nella registrazione. Controlla i dati inseriti."
+          );
         }
         setLoading(false);
         return;
-        }
-
+      }
 
       const userId = signUpData.user.id;
 
@@ -210,7 +233,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     background: "radial-gradient(circle at top, #111827 0, #020617 55%)",
     padding: 24,
     color: "#e5e7eb",
-    fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+    fontFamily:
+      "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
   },
   card: {
     width: "100%",

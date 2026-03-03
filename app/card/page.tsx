@@ -20,7 +20,13 @@ type Customer = {
   qr_code: string;
   created_at: string;
   restaurant_id: string | null;
-   restaurants?: { name: string; logo_url: string | null } | null;
+};
+
+type Restaurant = {
+  name: string;
+  logo_url: string | null;
+  primary_color: string | null;
+  accent_color: string | null;
 };
 
 export default function CardPage() {
@@ -28,6 +34,7 @@ export default function CardPage() {
 
   const [sessionChecked, setSessionChecked] = useState(false);
   const [customer, setCustomer] = useState<Customer | null>(null);
+  const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -36,7 +43,7 @@ export default function CardPage() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 1) controlla sessione e carica customer
+  // 1) controlla sessione e carica customer + restaurant
   useEffect(() => {
     async function init() {
       const {
@@ -52,16 +59,17 @@ export default function CardPage() {
 
       const { data: cust, error: custError } = await supabase
         .from("customers")
-        .select(`
+        .select(
+          `
           id,
           full_name,
           email,
           phone,
           qr_code,
           created_at,
-          restaurant_id,
-          restaurants ( name, logo_url )
-        `)
+          restaurant_id
+        `
+        )
         .eq("user_id", userId)
         .maybeSingle();
 
@@ -82,10 +90,31 @@ export default function CardPage() {
           qr_code: cust.qr_code,
           created_at: cust.created_at,
           restaurant_id: cust.restaurant_id ?? null,
-          restaurants: (cust as any).restaurants ?? null,
         };
 
         setCustomer(loadedCustomer);
+
+        // carica ristorante separato
+        if (loadedCustomer.restaurant_id) {
+          const { data: rest, error: restError } = await supabase
+            .from("restaurants")
+            .select("name, logo_url, primary_color, accent_color")
+            .eq("id", loadedCustomer.restaurant_id)
+            .maybeSingle();
+
+          if (!restError && rest) {
+            setRestaurant({
+              name: rest.name,
+              logo_url: rest.logo_url,
+              primary_color: rest.primary_color,
+              accent_color: rest.accent_color,
+            });
+          } else if (restError) {
+            console.error("restaurantError", restError);
+          }
+}
+
+
         await loadTransactions(loadedCustomer.id);
         setLoading(false);
       } else {
@@ -113,7 +142,7 @@ export default function CardPage() {
     setTransactions((txData || []) as Transaction[]);
   }
 
-  // 2) creazione card per utente loggato
+  // 2) creazione card per utente loggato (fallback: se entra qui significa che non c'è ancora customer)
   async function handleCreateCard(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -133,7 +162,7 @@ export default function CardPage() {
       const userId = user.id;
       const email = user.email;
 
-      const restaurantId = null;
+      const restaurantId = null; // in questo flow vecchio resta null
       const tempQr = `pending:${Date.now()}`;
 
       const { data: created, error: createError } = await supabase
@@ -146,16 +175,17 @@ export default function CardPage() {
           restaurant_id: restaurantId,
           qr_code: tempQr,
         })
-        .select(`
+        .select(
+          `
           id,
           full_name,
           email,
           phone,
           qr_code,
           created_at,
-          restaurant_id,
-          restaurants ( name )
-        `)
+          restaurant_id
+        `
+        )
         .single();
 
       if (createError || !created) {
@@ -185,7 +215,6 @@ export default function CardPage() {
         qr_code: realQr,
         created_at: created.created_at,
         restaurant_id: created.restaurant_id ?? null,
-        restaurants: (created as any).restaurants ?? null,
       };
 
       setCustomer(finalCustomer);
@@ -266,13 +295,20 @@ export default function CardPage() {
     );
   }
 
-  const currentPoints = transactions.reduce(
-    (acc, tx) => acc + (tx.points_delta || 0),
-    0
-  );
-  const joinedAt = new Date(customer.created_at).toLocaleDateString("it-IT");
+console.log("customer state:", customer, "restaurant state:", restaurant);
 
-  return (
+const currentPoints = transactions.reduce(
+  (acc, tx) => acc + (tx.points_delta || 0),
+  0
+);
+const joinedAt = new Date(customer.created_at).toLocaleDateString("it-IT");
+
+// colori tema ristorante
+const cardBg = restaurant?.primary_color || "#06327c";
+const cardBorder = restaurant?.accent_color || "#a855f7";
+const qrBg = restaurant?.primary_color || "#06327c";
+
+return (
     <div style={styles.page}>
       <div style={styles.cardWide}>
         <div style={styles.headerRow}>
@@ -329,16 +365,15 @@ export default function CardPage() {
               {/* Logo ristorante in basso */}
               <div style={styles.bottomLogoRow}>
                 <div style={styles.restaurantLogoCircle}>
-                  {customer.restaurants?.logo_url ? (
-                    // se usi <img> semplice
+                  {restaurant?.logo_url ? (
                     <img
-                      src={customer.restaurants.logo_url}
-                      alt={customer.restaurants.name || "Logo ristorante"}
+                      src={restaurant.logo_url}
+                      alt={restaurant.name || "Logo ristorante"}
                       style={styles.restaurantLogoImage}
                     />
                   ) : (
                     <span style={styles.restaurantLogoText}>
-                      {customer.restaurants?.name?.charAt(0).toUpperCase() || "R"}
+                      {(restaurant?.name || "R").charAt(0).toUpperCase()}
                     </span>
                   )}
                 </div>
@@ -605,9 +640,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontWeight: 700,
   },
   restaurantLogoImage: {
-  width: "70%",
-  height: "70%",
-  objectFit: "contain",
-},
-
+    width: "70%",
+    height: "70%",
+    objectFit: "contain",
+  },
 };
