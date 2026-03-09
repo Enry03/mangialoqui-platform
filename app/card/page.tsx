@@ -45,6 +45,7 @@ export default function CardPage() {
 
   useEffect(() => {
     async function init() {
+      // 1) Controllo sessione
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -56,6 +57,7 @@ export default function CardPage() {
 
       const userId = session.user.id;
 
+      // 2) Carico il customer legato all'utente
       const { data: cust, error: custError } = await supabase
         .from("customers")
         .select(
@@ -94,7 +96,7 @@ export default function CardPage() {
         setCustomer(loadedCustomer);
         console.log("customer loaded in card page:", loadedCustomer);
 
-        // carica ristorante separato
+        // 3) Carico il ristorante dalla FK restaurant_id (se presente)
         if (loadedCustomer.restaurant_id) {
           console.log(
             "loading restaurant by id from customer.restaurant_id:",
@@ -130,14 +132,15 @@ export default function CardPage() {
           );
         }
 
+        // 4) Carico lo storico transazioni
         await loadTransactions(loadedCustomer.id);
         setLoading(false);
+        setSessionChecked(true);
       } else {
+        // Nessun customer → mostro form di creazione
         setLoading(false);
+        setSessionChecked(true);
       }
-
-
-      setSessionChecked(true);
     }
 
     init();
@@ -177,7 +180,7 @@ export default function CardPage() {
       const userId = user.id;
       const email = user.email;
 
-      const restaurantId = null;
+      const restaurantId = null; // nessun ristorante associato alla creazione
       const tempQr = `pending:${Date.now()}`;
 
       const { data: created, error: createError } = await supabase
@@ -234,6 +237,7 @@ export default function CardPage() {
 
       setCustomer(finalCustomer);
 
+      // Bonus di benvenuto
       const { error: txError } = await supabase
         .from("loyalty_transactions")
         .insert({
@@ -531,8 +535,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: 13,
     color: "#f97373",
   },
-
-  // layout responsive: 2 colonne su desktop, 1 colonna su mobile
   cardLayout: {
     marginTop: 20,
     display: "grid",
@@ -595,8 +597,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontWeight: 700,
     fontSize: 14,
   },
-
-  // card verticale responsive
   verticalCard: {
     width: "100%",
     maxWidth: 280,
@@ -667,4 +667,3 @@ const styles: { [key: string]: React.CSSProperties } = {
     objectFit: "contain",
   },
 };
-
