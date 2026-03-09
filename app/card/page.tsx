@@ -92,27 +92,42 @@ export default function CardPage() {
         };
 
         setCustomer(loadedCustomer);
+        console.log("customer loaded in card page:", loadedCustomer);
 
+        // carica ristorante separato
         if (loadedCustomer.restaurant_id) {
+          console.log(
+            "loading restaurant by id from customer.restaurant_id:",
+            loadedCustomer.restaurant_id
+          );
+
           const { data: rest, error: restError } = await supabase
             .from("restaurants")
-            .select("name, logo_url, primary_color, accent_color")
+            .select("id, name, logo_url, primary_color, accent_color")
             .eq("id", loadedCustomer.restaurant_id)
             .maybeSingle();
 
           if (!restError && rest) {
+            console.log("restaurant loaded for card:", rest);
+
             setRestaurant({
               name: rest.name,
               logo_url: rest.logo_url,
               primary_color: rest.primary_color,
               accent_color: rest.accent_color,
             });
-
-            console.log("restaurant from DB:", rest);
-            console.log("restaurant.logo_url:", rest.logo_url);
           } else if (restError) {
-            console.error("restaurantError", restError);
+            console.error("restaurantError in card:", restError);
+          } else {
+            console.warn(
+              "no restaurant found with id from customer.restaurant_id:",
+              loadedCustomer.restaurant_id
+            );
           }
+        } else {
+          console.warn(
+            "customer.restaurant_id is null/undefined in card page, cannot load restaurant"
+          );
         }
 
         await loadTransactions(loadedCustomer.id);
@@ -120,6 +135,7 @@ export default function CardPage() {
       } else {
         setLoading(false);
       }
+
 
       setSessionChecked(true);
     }
