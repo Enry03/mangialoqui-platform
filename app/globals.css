@@ -24,3 +24,10 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@media (max-width: 768px) {
+  /* forza la cardLayout a una colonna su mobile */
+  .card-grid-responsive {
+    grid-template-columns: 1fr !important;
+  }
+}
