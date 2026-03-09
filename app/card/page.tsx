@@ -107,6 +107,9 @@ export default function CardPage() {
               primary_color: rest.primary_color,
               accent_color: rest.accent_color,
             });
+
+            console.log("restaurant from DB:", rest);
+            console.log("restaurant.logo_url:", rest.logo_url);
           } else if (restError) {
             console.error("restaurantError", restError);
           }
