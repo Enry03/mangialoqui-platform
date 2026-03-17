@@ -41,18 +41,21 @@ export default function ReservePage() {
         const { data, error } = await supabase
           .from("restaurants")
           .select("id, name, slug")
-          .eq("slug", slug)
-          .maybeSingle();
+          .ilike("slug", slug); // case-insensitive
 
-        if (error || !data) {
-          console.error("restaurant load error", error);
+        console.log("DEBUG restaurants by slug:", data, error);
+
+        if (error || !data || data.length === 0) {
+          console.error("restaurant_load_error", error);
           setRestaurantError("Ristorante non trovato.");
           setLoadingRestaurant(false);
           return;
         }
 
-        setRestaurantId(data.id as string);
+        const rest = data[0];
+        setRestaurantId(rest.id as string);
         setLoadingRestaurant(false);
+
       } catch (err) {
         console.error(err);
         setRestaurantError("Errore nel caricamento del ristorante.");
