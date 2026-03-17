@@ -34,6 +34,9 @@ export default function ReservePage() {
           setLoadingRestaurant(false);
           return;
         }
+        console.log("HOST RESERVE:", host);
+        console.log("SLUG RESERVE:", slug);
+
 
         const { data, error } = await supabase
           .from("restaurants")
