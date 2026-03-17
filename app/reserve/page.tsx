@@ -1,16 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/supabaseClient";
+import { getSubdomainFromHost } from "@/lib/getSubdomain";
 
 export default function ReservePage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  // Per ora prendiamo restaurant_id da query ?restaurant_id=...
-  // (poi lo sostituiremo con slug / dominio)
-  const restaurantId = searchParams.get("restaurant_id");
+  const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  const [loadingRestaurant, setLoadingRestaurant] = useState(true);
+  const [restaurantError, setRestaurantError] = useState<string | null>(null);
 
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
@@ -23,6 +20,45 @@ export default function ReservePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // Carica restaurant_id dallo slug del dominio
+  useEffect(() => {
+    async function loadRestaurant() {
+      try {
+        const host =
+          typeof window !== "undefined" ? window.location.hostname : null;
+        const slug = getSubdomainFromHost(host);
+
+        if (!slug) {
+          setRestaurantError("Ristorante non riconosciuto dall'URL.");
+          setLoadingRestaurant(false);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("restaurants")
+          .select("id, name, slug")
+          .eq("slug", slug)
+          .maybeSingle();
+
+        if (error || !data) {
+          console.error("restaurant load error", error);
+          setRestaurantError("Ristorante non trovato.");
+          setLoadingRestaurant(false);
+          return;
+        }
+
+        setRestaurantId(data.id as string);
+        setLoadingRestaurant(false);
+      } catch (err) {
+        console.error(err);
+        setRestaurantError("Errore nel caricamento del ristorante.");
+        setLoadingRestaurant(false);
+      }
+    }
+
+    loadRestaurant();
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -53,7 +89,6 @@ export default function ReservePage() {
           booking_time: bookingTime,
           people,
           note: note || null,
-          // status, id, created_at usano i default del db
         });
 
       if (insertError) {
@@ -63,8 +98,6 @@ export default function ReservePage() {
       }
 
       setSuccess(true);
-      // opzionale: reset form
-      // setCustomerName(""); ...
     } catch (err) {
       console.error(err);
       setError("Errore imprevisto.");
@@ -73,19 +106,24 @@ export default function ReservePage() {
     }
   }
 
+  if (loadingRestaurant) {
+    return (
+      <div style={styles.page}>
+        <div style={styles.card}>Caricamento ristorante...</div>
+      </div>
+    );
+  }
+
   return (
     <div style={styles.page}>
       <div style={styles.card}>
         <h1 style={styles.title}>Prenota un tavolo</h1>
         <p style={styles.subtitle}>
-          Inserisci i tuoi dati, ti confermeremo la prenotazione appena possibile.
+          Inserisci i tuoi dati, ti confermeremo la prenotazione appena
+          possibile.
         </p>
 
-        {!restaurantId && (
-          <div style={styles.error}>
-            Ristorante non riconosciuto. Apri questa pagina dal link corretto.
-          </div>
-        )}
+        {restaurantError && <div style={styles.error}>{restaurantError}</div>}
 
         <form onSubmit={handleSubmit} style={styles.form}>
           <label style={styles.label}>

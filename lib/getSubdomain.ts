@@ -1,9 +1,7 @@
-export function getSubdomainFromHost(host?: string | null): string | null {
+// lib/getSubdomain.ts
+export function getSubdomainFromHost(host?: string | null) {
   if (!host) return null;
-
-  // es: morsiburger.mangialoqui.com
   const parts = host.split(".");
-  if (parts.length < 3) return null; // niente subdominio
-
-  return parts[0]; // "morsiburger"
+  if (parts.length < 3) return null; // es. mangialoqui.it → nessun subdomain
+  return parts[0]; // es. morsiburger.mangialoqui.it → "morsiburger"
 }
