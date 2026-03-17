@@ -84,7 +84,7 @@ export default async function Home() {
           Powered by Mangialoqui
         </p>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {/* Fidelity */}
           <Link
             href="/card"
@@ -125,7 +125,7 @@ export default async function Home() {
 
           {/* Prenotazioni */}
           <Link
-            href="/prenota"
+            href="/reserve"   // <-- cambiato da /prenota a /reserve
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -142,7 +142,7 @@ export default async function Home() {
             Prenota un tavolo
           </Link>
         </div>
-
+        
         <p
           style={{
             marginTop: 18,
