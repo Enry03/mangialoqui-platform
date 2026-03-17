@@ -34,16 +34,11 @@ export default function ReservePage() {
           setLoadingRestaurant(false);
           return;
         }
-        console.log("HOST RESERVE:", host);
-        console.log("SLUG RESERVE:", slug);
-
 
         const { data, error } = await supabase
           .from("restaurants")
           .select("id, name, slug")
-          .ilike("slug", slug); // case-insensitive
-
-        console.log("DEBUG restaurants by slug:", data, error);
+          .ilike("slug", slug);
 
         if (error || !data || data.length === 0) {
           console.error("restaurant_load_error", error);
@@ -55,7 +50,6 @@ export default function ReservePage() {
         const rest = data[0];
         setRestaurantId(rest.id as string);
         setLoadingRestaurant(false);
-
       } catch (err) {
         console.error(err);
         setRestaurantError("Errore nel caricamento del ristorante.");
@@ -95,13 +89,16 @@ export default function ReservePage() {
           booking_time: bookingTime,
           people,
           note: note || null,
+          // status, id, created_at usano i default del db
         });
 
       if (insertError) {
         console.error(insertError);
-        setError("Errore nell'invio della prenotazione.");
+        setError("Errore nell'invio della richiesta.");
         return;
       }
+
+      // Qui in futuro agganceremo una Edge Function che manda la mail al cliente
 
       setSuccess(true);
     } catch (err) {
@@ -115,114 +112,155 @@ export default function ReservePage() {
   if (loadingRestaurant) {
     return (
       <div style={styles.page}>
-        <div style={styles.card}>Caricamento ristorante...</div>
+        <div style={styles.loading}>Caricamento ristorante...</div>
       </div>
     );
   }
 
   return (
     <div style={styles.page}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>Prenota un tavolo</h1>
-        <p style={styles.subtitle}>
-          Inserisci i tuoi dati, ti confermeremo la prenotazione appena
-          possibile.
-        </p>
-
-        {restaurantError && <div style={styles.error}>{restaurantError}</div>}
-
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <label style={styles.label}>
-            Nome e cognome *
-            <input
-              style={styles.input}
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              placeholder="Es. Mario Rossi"
-            />
-          </label>
-
-          <label style={styles.label}>
-            Email *
-            <input
-              style={styles.input}
-              type="email"
-              value={customerEmail}
-              onChange={(e) => setCustomerEmail(e.target.value)}
-              placeholder="nome@example.com"
-            />
-          </label>
-
-          <label style={styles.label}>
-            Telefono *
-            <input
-              style={styles.input}
-              value={customerPhone}
-              onChange={(e) => setCustomerPhone(e.target.value)}
-              placeholder="Es. 3331234567"
-            />
-          </label>
-
-          <label style={styles.label}>
-            Data prenotazione *
-            <input
-              style={styles.input}
-              type="date"
-              value={bookingDate}
-              onChange={(e) => setBookingDate(e.target.value)}
-            />
-          </label>
-
-          <label style={styles.label}>
-            Orario *
-            <select
-              style={styles.input}
-              value={bookingTime}
-              onChange={(e) => setBookingTime(e.target.value)}
-            >
-              <option value="19:00">19:00</option>
-              <option value="20:00">20:00</option>
-              <option value="21:00">21:00</option>
-            </select>
-          </label>
-
-          <label style={styles.label}>
-            Numero di persone *
-            <input
-              style={styles.input}
-              type="number"
-              min={1}
-              max={20}
-              value={people}
-              onChange={(e) => setPeople(parseInt(e.target.value || "1", 10))}
-            />
-          </label>
-
-          <label style={styles.label}>
-            Note (opzionale)
-            <textarea
-              style={{ ...styles.input, minHeight: 80, borderRadius: 12 }}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Intolleranze, richieste particolari..."
-            />
-          </label>
-
-          {error && <div style={styles.error}>{error}</div>}
-          {success && (
-            <div style={styles.success}>
-              Prenotazione inviata, ti arriverà una conferma via email.
-            </div>
-          )}
-
+      <div style={styles.wrapper}>
+        <header style={styles.header}>
           <button
-            type="submit"
-            style={styles.primaryButton}
-            disabled={submitting || !restaurantId}
+            type="button"
+            onClick={() => history.back()}
+            style={styles.backButton}
           >
-            {submitting ? "Invio in corso..." : "Invia prenotazione"}
+            ←
           </button>
-        </form>
+          <div style={styles.headerInfo}>
+            <div style={styles.headerTitle}>Prenota un tavolo</div>
+            <div style={styles.headerSub}>
+              Questa è una richiesta di prenotazione.
+            </div>
+          </div>
+        </header>
+
+        <main style={styles.main}>
+          {restaurantError && <div style={styles.error}>{restaurantError}</div>}
+
+          <p style={styles.subtitle}>
+            Inserisci i tuoi dati: la richiesta verrà inviata al ristorante e
+            sarà valida solo dopo la conferma.
+          </p>
+
+          <form onSubmit={handleSubmit} style={styles.form}>
+            {/* Quando */}
+            <section style={styles.group}>
+              <h2 style={styles.groupTitle}>Quando</h2>
+
+              <label style={styles.label}>
+                Data prenotazione *
+                <input
+                  style={styles.input}
+                  type="date"
+                  value={bookingDate}
+                  onChange={(e) => setBookingDate(e.target.value)}
+                />
+              </label>
+
+              <label style={styles.label}>
+                Orario *
+                <select
+                  style={styles.input}
+                  value={bookingTime}
+                  onChange={(e) => setBookingTime(e.target.value)}
+                >
+                  <option value="19:00">19:00</option>
+                  <option value="20:00">20:00</option>
+                  <option value="21:00">21:00</option>
+                </select>
+              </label>
+
+              <label style={styles.label}>
+                Numero di persone *
+                <input
+                  style={styles.input}
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={people}
+                  onChange={(e) =>
+                    setPeople(parseInt(e.target.value || "1", 10))
+                  }
+                />
+              </label>
+            </section>
+
+            {/* Dati cliente */}
+            <section style={styles.group}>
+              <h2 style={styles.groupTitle}>I tuoi dati</h2>
+
+              <label style={styles.label}>
+                Nome e cognome *
+                <input
+                  style={styles.input}
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="Es. Mario Rossi"
+                />
+              </label>
+
+              <label style={styles.label}>
+                Email *
+                <input
+                  style={styles.input}
+                  type="email"
+                  value={customerEmail}
+                  onChange={(e) => setCustomerEmail(e.target.value)}
+                  placeholder="nome@example.com"
+                />
+              </label>
+
+              <label style={styles.label}>
+                Telefono *
+                <input
+                  style={styles.input}
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  placeholder="Es. 3331234567"
+                />
+              </label>
+            </section>
+
+            {/* Note */}
+            <section style={styles.group}>
+              <h2 style={styles.groupTitle}>Note (opzionale)</h2>
+              <label style={styles.label}>
+                Richieste particolari
+                <textarea
+                  style={styles.textarea}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="Intolleranze, allergie, occasioni speciali..."
+                />
+              </label>
+            </section>
+
+            {error && <div style={styles.error}>{error}</div>}
+            {success && (
+              <div style={styles.success}>
+                Richiesta inviata. Riceverai una email di conferma appena il
+                ristorante approverà la prenotazione.
+              </div>
+            )}
+
+            <button
+              type="submit"
+              style={styles.primaryButton}
+              disabled={submitting || !restaurantId}
+            >
+              {submitting
+                ? "Invio in corso..."
+                : "Invia richiesta di prenotazione"}
+            </button>
+
+            <p style={styles.footerNote}>
+              Nessun addebito ora. La prenotazione sarà effettiva solo dopo la
+              conferma del ristorante.
+            </p>
+          </form>
+        </main>
       </div>
     </div>
   );
@@ -231,73 +269,139 @@ export default function ReservePage() {
 const styles: { [key: string]: React.CSSProperties } = {
   page: {
     minHeight: "100vh",
-    background: "radial-gradient(circle at top, #111827 0, #020617 55%)",
-    padding: "28px 16px 40px",
-    color: "#e5e7eb",
-    fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+    background:
+      "linear-gradient(180deg, #020617 0%, #02091b 35%, #020617 100%)",
     display: "flex",
     justifyContent: "center",
+    padding: "16px 12px 24px",
+    fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
   },
-  card: {
+  loading: {
+    color: "#e5e7eb",
+  },
+  wrapper: {
     width: "100%",
-    maxWidth: 480,
-    background: "rgba(15,23,42,0.98)",
-    borderRadius: 20,
-    border: "1px solid rgba(55,65,81,0.9)",
-    boxShadow: "0 24px 60px rgba(15,23,42,0.85)",
-    padding: 24,
+    maxWidth: 520,
+    display: "flex",
+    flexDirection: "column",
+    gap: 12,
   },
-  title: {
-    margin: 0,
-    fontSize: 22,
-    fontWeight: 700,
+  header: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    padding: "4px 4px 0",
+  },
+  backButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 999,
+    border: "1px solid rgba(148,163,184,0.5)",
+    backgroundColor: "rgba(15,23,42,0.95)",
+    color: "#e5e7eb",
+    cursor: "pointer",
+    fontSize: 16,
+    lineHeight: "30px",
+    textAlign: "center",
+  },
+  headerInfo: {
+    display: "flex",
+    flexDirection: "column",
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 600,
+    color: "#e5e7eb",
+  },
+  headerSub: {
+    fontSize: 12,
+    color: "#9ca3af",
+  },
+  main: {
+    marginTop: 4,
+    backgroundColor: "#f9fafb",
+    borderRadius: 24,
+    padding: 18,
+    boxShadow: "0 18px 50px rgba(15,23,42,0.65)",
   },
   subtitle: {
-    marginTop: 8,
-    marginBottom: 20,
-    fontSize: 14,
-    color: "#9ca3af",
+    fontSize: 13,
+    color: "#4b5563",
+    marginBottom: 16,
   },
   form: {
     display: "flex",
     flexDirection: "column",
-    gap: 14,
+    gap: 16,
+  },
+  group: {
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: "#ffffff",
+    border: "1px solid #e5e7eb",
+    display: "flex",
+    flexDirection: "column",
+    gap: 10,
+  },
+  groupTitle: {
+    fontSize: 13,
+    fontWeight: 600,
+    color: "#0f172a",
   },
   label: {
-    fontSize: 13,
+    fontSize: 12,
     display: "flex",
     flexDirection: "column",
     gap: 6,
+    color: "#4b5563",
   },
   input: {
     borderRadius: 999,
-    border: "1px solid rgba(55,65,81,0.9)",
-    background: "rgba(15,23,42,0.85)",
-    color: "#e5e7eb",
+    border: "1px solid #cbd5e1",
+    background: "#f9fafb",
+    color: "#0f172a",
     padding: "8px 14px",
     fontSize: 14,
     outline: "none",
   },
+  textarea: {
+    borderRadius: 16,
+    border: "1px solid #cbd5e1",
+    background: "#f9fafb",
+    color: "#0f172a",
+    padding: "10px 14px",
+    fontSize: 14,
+    outline: "none",
+    minHeight: 80,
+    resize: "vertical",
+  },
   primaryButton: {
-    marginTop: 10,
-    padding: "10px 18px",
+    marginTop: 4,
+    padding: "12px 18px",
     borderRadius: 999,
     border: "none",
     cursor: "pointer",
-    background: "linear-gradient(to right, #2563eb, #7c3aed)",
+    background:
+      "linear-gradient(90deg, #0f172a 0%, #1d3557 40%, #e36414 100%)",
     color: "#f9fafb",
     fontWeight: 600,
-    fontSize: 14,
-    boxShadow: "0 10px 30px rgba(37,99,235,0.35)",
+    fontSize: 15,
+    boxShadow: "0 14px 30px rgba(15,23,42,0.55)",
   },
   error: {
-    marginTop: 4,
+    marginBottom: 8,
     fontSize: 13,
-    color: "#f97373",
+    color: "#dc2626",
   },
   success: {
-    marginTop: 4,
+    marginBottom: 8,
     fontSize: 13,
-    color: "#4ade80",
+    color: "#15803d",
+  },
+  footerNote: {
+    marginTop: 8,
+    fontSize: 11,
+    color: "#6b7280",
+    textAlign: "center",
   },
 };
